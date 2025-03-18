@@ -1,32 +1,45 @@
-name: "build and deploy react app"
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Login to GitHub Container Registry (GHCR)
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build Docker Image
-        run: docker build -t ghcr.io/${{ github.actor }}/${{ github.event.repository.name }}:latest .
-
-      - name: Verify Vue Build Output
-        run: |
-          CONTAINER_ID=$(docker create ghcr.io/${{ github.actor }}/${{ github.event.repository.name }}:latest)
-          docker cp $CONTAINER_ID:/usr/share/nginx/html ./dist
-          docker rm -v $CONTAINER_ID
-          ls -la ./dist
-
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      # Step 2: Setup Node.js (using Node 18 for modern support)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          branch: gh-pages
-          folder: dist
+          node-version: "18"
+
+      # Step 3: Install Dependencies
+      - name: Install Dependencies
+        run: npm install
+
+      # Step 4: Build the project (works for React + Vite)
+      - name: Build project
+        run: npm run build
+
+      # Step 5: Debug build directory (optional step for troubleshooting)
+      - name: Debug build directory
+        run: ls -la ./dist
+
+      # Step 6: Debug Node.js version (optional step for troubleshooting)
+      - name: Debug Node.js version
+        run: node -v
+
+      # Step 7: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
